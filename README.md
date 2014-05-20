@@ -1,4 +1,4 @@
-* FFmpeg/libav bindings for Matlab
+# FFmpeg/libav bindings for Matlab
 
 These bindings use ffmpeg to read videos into Matlab. Just run make
 and addpath this directory.
