@@ -46,32 +46,6 @@ AVCodecContext *getCodec(AVFormatContext *pFormatCtx, int videoStream) {
   return pCodecCtx;
 }
 
-void matlabOpenVideo(char *filename) {
-  pFormatCtx = openVideo(filename);
-  videoStream = firstVideoStream(pFormatCtx);
-  pCodecCtx = getCodec(pFormatCtx,videoStream);
-  pFrame = avcodec_alloc_frame();
-  pFrameRGB24 = avcodec_alloc_frame();
-  if(!pFrameRGB24 || !pFrame) {
-    mexErrMsgTxt("error: Can't allocate frame!");
-  }
-  buffer = (uint8_t *)av_malloc(avpicture_get_size(PIX_FMT_RGB24,
-						   pCodecCtx->width,
-						   pCodecCtx->height) *
-				sizeof(uint8_t));
-  avpicture_fill((AVPicture *)pFrameRGB24, buffer, PIX_FMT_RGB24,
-		 pCodecCtx->width, pCodecCtx->height);
-  img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height,
-				   pCodecCtx->pix_fmt,
-				   pCodecCtx->width, pCodecCtx->height,
-				   PIX_FMT_RGB24, SWS_BICUBIC,
-				   NULL, NULL, NULL);
-  videoFinished = 0;
-  frame = 0;
-  av_init_packet(&packet);
-  matlabNextFrame();
-}
-
 void matlabNextFrame() {
   if(videoFinished == 2) {
     videoFinished = 1;
@@ -96,6 +70,32 @@ void matlabNextFrame() {
       frame++;
     }
   }
+}
+
+void matlabOpenVideo(char *filename) {
+  pFormatCtx = openVideo(filename);
+  videoStream = firstVideoStream(pFormatCtx);
+  pCodecCtx = getCodec(pFormatCtx,videoStream);
+  pFrame = avcodec_alloc_frame();
+  pFrameRGB24 = avcodec_alloc_frame();
+  if(!pFrameRGB24 || !pFrame) {
+    mexErrMsgTxt("error: Can't allocate frame!");
+  }
+  buffer = (uint8_t *)av_malloc(avpicture_get_size(PIX_FMT_RGB24,
+						   pCodecCtx->width,
+						   pCodecCtx->height) *
+				sizeof(uint8_t));
+  avpicture_fill((AVPicture *)pFrameRGB24, buffer, PIX_FMT_RGB24,
+		 pCodecCtx->width, pCodecCtx->height);
+  img_convert_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height,
+				   pCodecCtx->pix_fmt,
+				   pCodecCtx->width, pCodecCtx->height,
+				   PIX_FMT_RGB24, SWS_BICUBIC,
+				   NULL, NULL, NULL);
+  videoFinished = 0;
+  frame = 0;
+  av_init_packet(&packet);
+  matlabNextFrame();
 }
 
 void matlabClose() {
