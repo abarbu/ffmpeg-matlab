@@ -1,6 +1,7 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
+#include <libavutil/avutil.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,8 +18,16 @@ static AVPacket packet;
 static int frame = -1;
 static int videoFinished = 1;
 
+#define PREAV54 (LIBAVUTIL_VERSION_MAJOR < 54)
+
 int firstVideoStream(AVFormatContext *pFormatCtx) {
-  if(av_find_stream_info(pFormatCtx)<0) {
+  if(
+#if PREAV54
+     av_find_stream_info(pFormatCtx)
+#else
+     avformat_find_stream_info(pFormatCtx, NULL)
+#endif
+     <0) {
     mexErrMsgTxt("error: Can't get video stream information");
   }
   for(int i=0; i < pFormatCtx->nb_streams; i++)
@@ -41,7 +50,13 @@ AVCodecContext *getCodec(AVFormatContext *pFormatCtx, int videoStream) {
   AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
   if(pCodec==NULL)
     mexErrMsgTxt("error: Unsupported codec!");
-  if(avcodec_open(pCodecCtx, pCodec)<0)
+  if(
+#if PREAV54
+     avcodec_open(pCodecCtx, pCodec)
+#else
+     avcodec_open2(pCodecCtx, pCodec, NULL)
+#endif
+     <0)
     mexErrMsgTxt("error: Can't open codec!");
   return pCodecCtx;
 }
@@ -76,8 +91,21 @@ void matlabOpenVideo(char *filename) {
   pFormatCtx = openVideo(filename);
   videoStream = firstVideoStream(pFormatCtx);
   pCodecCtx = getCodec(pFormatCtx,videoStream);
-  pFrame = avcodec_alloc_frame();
-  pFrameRGB24 = avcodec_alloc_frame();
+  pFrame =
+#if PREAV54
+    avcodec_alloc_frame()
+#else
+    av_frame_alloc()
+#endif
+    ;
+  pFrameRGB24 = 
+#if PREAV54
+    avcodec_alloc_frame()
+#else
+    av_frame_alloc()
+#endif
+    ;
+
   if(!pFrameRGB24 || !pFrame) {
     mexErrMsgTxt("error: Can't allocate frame!");
   }
@@ -107,7 +135,11 @@ void matlabClose() {
   pFrame = NULL;
   avcodec_close(pCodecCtx);
   pCodecCtx = NULL;
+#if PREAV54
   av_close_input_file(pFormatCtx);
+#else
+  avformat_close_input(&pFormatCtx);
+#endif
   pFormatCtx = NULL;
   videoFinished = 1;
 }
